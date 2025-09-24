@@ -43,17 +43,17 @@ operations
 - A Supabase account
 - Git(Push, Cloning)
 
-### 1. Clone or Download the Project
-# Option 1: Clone with Git
+## 1. Clone or Download the Project
+### Option 1: Clone with Git
 git clone <https://github.com/kamalpanasa/Python-Full-Stack-Project.git>
 
-# Option 2: Download and extract the ZIP file
+### Option 2: Download and extract the ZIP file
 
-### 2. Install Dependencies
-# Install all required Python packages
+## 2. Install Dependencies
+### Install all required Python packages
 pip install -r requirements.txt
 
-### 3. Set Up Supabase Database
+## 3. Set Up Supabase Database
 
 1.Create a Supabase Project:
 
@@ -75,7 +75,7 @@ create table users (
 
 3. **Get Your Credentials:
 
-### 4. Configure Environment Variables
+## 4. Configure Environment Variables
 
 1. Create a `.env` file in the project root
 
@@ -83,21 +83,21 @@ create table users (
 SUPABASE_URL = "https://gekitershzcibxxceuus.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdla2l0ZXJzaHpjaWJ4eGNldXVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2ODY4NzUsImV4cCI6MjA3NDI2Mjg3NX0.EYdx1rKEy5Kt0rhPc0ZXY-1q07ZTJsOEPgTZ3ktmxvY"
 
-### 5. Run the application
+## 5. Run the application
 
-## Streamlit Frontend
+### Streamlit Frontend
 streamlit run frontend/app.py
 
 The app will open in your browser at `http://localhost:5000`
 
-## FastAPI Backend
+### FastAPI Backend
 
 cd api
 python main.py
 
 The API will be available at `http://localhost:8000`
 
-## How to Use
+### How to Use
 
 - **Frontend** : React.js + Tailwind CSS (interactive UI)
 
@@ -107,7 +107,7 @@ The API will be available at `http://localhost:8000`
 
 - **Language** : Python 3.8+
 
-### Key Components
+## Key Components
 
 1. **`src/db.py`**: Database operations
     - Handles all CRUD operations with Supabase
