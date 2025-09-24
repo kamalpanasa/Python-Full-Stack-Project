@@ -1,20 +1,26 @@
-# TypeMaster
+# ⌨️ TypeMaster  
 
-TypeMaster is a full-stack web application that helps users practice and improve their typing skills by measuring speed (WPM), accuracy, and mistakes in real-time. The app provides random passages of different difficulty levels for typing tests, tracks each attempt, and generates detailed results. Users can create accounts, compete on a global leaderboard, and monitor their performance history to see progress over time.
+TypeMaster is a **full-stack web application** that helps users **practice and improve their typing skills** by measuring **speed (WPM)**, **accuracy**, and **mistakes** in real-time. 🚀  
 
-## Features
-
-- User authentication and profiles  
-- Random text generation with difficulty levels  
-- Real-time timer and WPM/accuracy calculation  
-- Leaderboard showcasing top performers  
-- Progress tracking and analytics for each user  
-- Modern UI powered by Streamlit frontend  
-- REST API powered by FastAPI backend  
+The app provides **random passages** of different difficulty levels, tracks each attempt, and generates **detailed results**. Users can **create accounts**, **compete on a global leaderboard**, and **monitor performance history** to track their progress over time. 📊✨  
 
 ---
 
-## Project Structure
+## 🌟 Features  
+
+- 🔑 **User Authentication & Profiles**  
+- 📖 **Random Text Generation** (easy, medium, hard levels)  
+- ⏱ **Real-time Timer** with WPM & Accuracy calculation  
+- 🏆 **Leaderboard** showcasing top performers  
+- 📈 **Progress Tracking & Analytics** per user  
+- 🎨 **Modern UI** powered by **Streamlit** frontend  
+- ⚡ **REST API** powered by **FastAPI** backend  
+
+---
+
+## 📂 Project Structure  
+
+
 ```
 TypeMaster/
 |
@@ -35,24 +41,33 @@ operations
 |
 |---.env                # Python variables
 ```
-## Quick Start
 
-### Prerequisites
+---
 
-- Python 3.8 or higher
-- A Supabase account
-- Git(Push, Cloning)
+## ⚡ Quick Start  
 
-## 1. Clone or Download the Project
-### Option 1: Clone with Git
-git clone <https://github.com/kamalpanasa/Python-Full-Stack-Project.git>
+### ✅ Prerequisites  
+
+- 🐍 Python **3.8 or higher**  
+- 🗄️ A **Supabase account**  
+- 🌐 Git (**for cloning or pushing**)  
+
+---
+
+### 1️⃣ Clone or Download the Project  
+
+**Option 1: Clone with Git**  
+```bash
+git clone https://github.com/kamalpanasa/Python-Full-Stack-Project.git
+```
 
 ### Option 2: Download and extract the ZIP file
 
 ## 2. Install Dependencies
 ### Install all required Python packages
+```
 pip install -r requirements.txt
-
+```
 ## 3. Set Up Supabase Database
 
 1.Create a Supabase Project:
@@ -70,6 +85,39 @@ create table users (
     full_name varchar(100),
     created_at timestamp default now()
 );
+
+create table texts (
+    id serial primary key,
+    content text not null,
+    difficulty varchar(20) check (difficulty in ('easy', 'medium', 'hard')),
+    language varchar(30) default 'English',
+    created_at timestamp default now()
+);
+
+create table results (
+    id serial primary key,
+    user_id uuid references users(id) on delete cascade,
+    text_id int references texts(id) on delete set null,
+    wpm numeric(5,2) not null,
+    accuracy numeric(5,2) not null,
+    mistakes int default 0,
+    duration numeric(6,2) not null,
+    created_at timestamp default now()
+);
+
+create view leaderboard as
+select 
+    r.user_id,
+    u.username,
+    max(r.wpm) as best_wpm,
+    max(r.accuracy) as best_accuracy,
+    count(r.id) as total_tests,
+    max(r.created_at) as last_played
+from results r
+join users u on u.id = r.user_id
+group by r.user_id, u.username
+order by best_wpm desc;
+
 
 ```
 
