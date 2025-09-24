@@ -2,20 +2,20 @@
 
 TypeMaster is a full-stack web application that helps users practice and improve their typing skills by measuring speed (WPM), accuracy, and mistakes in real-time. The app provides random passages of different difficulty levels for typing tests, tracks each attempt, and generates detailed results. Users can create accounts, compete on a global leaderboard, and monitor their performance history to see progress over time.
 
-## Key features include:
+## Features
 
-- User authentication and profiles
+- User authentication and profiles  
+- Random text generation with difficulty levels  
+- Real-time timer and WPM/accuracy calculation  
+- Leaderboard showcasing top performers  
+- Progress tracking and analytics for each user  
+- Modern UI powered by Streamlit frontend  
+- REST API powered by FastAPI backend  
 
-- Random text generation with difficulty levels
+---
 
-- Real-time timer and WPM/accuracy calculation
-
-- Leaderboard showcasing top performers
-
-- Progress tracking and analytics for each user
-
-# Project Structure
-
+## Project Structure
+```
 TypeMaster/
 |
 |---src/                # core application logic
@@ -34,7 +34,7 @@ operations
 |---README.md           # Project documentation
 |
 |---.env                # Python variables
-
+```
 ## Quick Start
 
 ### Prerequisites
@@ -87,3 +87,51 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 
 ## Streamlit Frontend
 streamlit run frontend/app.py
+
+The app will open in your browser at `http://localhost:5000`
+
+## FastAPI Backend
+
+cd api
+python main.py
+
+The API will be available at `http://localhost:8000`
+
+## How to Use
+
+- **Frontend** : React.js + Tailwind CSS (interactive UI)
+
+- **Backend** : Fast API (Python REST API framework)
+
+- **Database** : Supabase (PostgreSQL with Auth & Storage)
+
+- **Language** : Python 3.8+
+
+### Key Components
+
+1. **`src/db.py`**: Database operations
+    - Handles all CRUD operations with Supabase
+
+2. **`src/logic.py`**: Business logic
+    - Task validation and processing
+
+
+## Troubleshooting
+
+## Common Issues
+
+1. **"Module not found" errors**
+    - Make sure you've installed all dependencies: `pip install requirements.txt`
+    - Check that you're running commands from the correct directory
+
+## Future Enhancements
+
+Ideas for extending this project:
+
+
+## Support 
+
+If you encounter any issues or have questions:
+- Contact : 1234567890
+- Mail : panasakamal92@gmail.com
+
