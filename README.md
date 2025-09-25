@@ -121,16 +121,17 @@ order by best_wpm desc;
 
 ```
 
-3. **Get Your Credentials:
+3. Get Your Credentials:
 
 ## 4. Configure Environment Variables
 
 1. Create a `.env` file in the project root
 
 2. Add your Supabase credentials to `.env` :
-SUPABASE_URL = "https://gekitershzcibxxceuus.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdla2l0ZXJzaHpjaWJ4eGNldXVzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2ODY4NzUsImV4cCI6MjA3NDI2Mjg3NX0.EYdx1rKEy5Kt0rhPc0ZXY-1q07ZTJsOEPgTZ3ktmxvY"
-
+```
+SUPABASE_URL = 
+SUPABASE_KEY = 
+```
 ## 5. Run the application
 
 ### Streamlit Frontend
