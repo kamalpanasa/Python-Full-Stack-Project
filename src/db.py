@@ -1,4 +1,5 @@
 import os
+import random
 from supabase import create_client
 from dotenv import load_dotenv
 
@@ -12,7 +13,7 @@ supabase = create_client(url, key)
 
 # ---------------- USERS TABLE OPERATIONS ---------------- #
 
-def create_user(username, email, full_name):
+def create_user(username, email, full_name=None):
     try:
         return supabase.table("users").insert({
             "username": username,
@@ -46,6 +47,7 @@ def get_user_by_username(username):
     except Exception as e:
         return {"data": None, "error": str(e)}
 
+
 # ---------------- TEXTS TABLE OPERATIONS ---------------- #
 
 def create_text(content, difficulty, language="English"):
@@ -60,11 +62,10 @@ def create_text(content, difficulty, language="English"):
 
 def get_random_text(difficulty="easy"):
     try:
-        count_res = supabase.table("texts").select("id", count="exact").eq("difficulty", difficulty).execute()
-        if count_res.count == 0:
+        res = supabase.table("texts").select("*").eq("difficulty", difficulty).execute()
+        if not res.data:
             return {"data": [], "error": None}
-            
-        return supabase.table("texts").select("*").eq("difficulty", difficulty).order("RANDOM()").limit(1).execute()
+        return {"data": [random.choice(res.data)], "error": None}
     except Exception as e:
         return {"data": [], "error": str(e)}
 
@@ -77,14 +78,15 @@ def get_all_texts():
 
 # ---------------- RESULTS TABLE OPERATIONS ---------------- #
 
-def create_result(user_id, text_id, wpm, accuracy, mistakes):
+def create_result(user_id, text_id, wpm, accuracy, mistakes, duration):
     try:
         return supabase.table("results").insert({
             "user_id": user_id,
             "text_id": text_id,
             "wpm": wpm,
             "accuracy": accuracy,
-            "mistakes": mistakes
+            "mistakes": mistakes,
+            "duration": duration
         }).execute()
     except Exception as e:
         return {"data": None, "error": str(e)}
@@ -100,6 +102,6 @@ def get_user_results(user_id):
 
 def get_leaderboard(limit=10):
     try:
-        return supabase.table("results").select("user_id, wpm, accuracy").order("wpm", desc=True).limit(limit).execute()
+        return supabase.table("leaderboard").select("*").limit(limit).execute()
     except Exception as e:
         return {"data": [], "error": str(e)}

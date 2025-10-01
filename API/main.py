@@ -1,130 +1,70 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI
 from pydantic import BaseModel
-from typing import Optional
-import sys
-import os
+from src import db, logic
 
-# Get the absolute path to the project root directory
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-sys.path.append(project_root)
+app = FastAPI(title="TypeMaster API")
 
-from src.logic import TypeMaster
 
-# ------------------- App Setup -------------------
+# ------------------- Models ------------------- #
 
-app = FastAPI(title="TypeMaster API", version="1.0")
-
-# ------------------- CORS Middleware -------------------
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Creating a TypeMaster Instance (business logic)
-type_master = TypeMaster()
-
-# ------------------- Data Models -------------------
-
-class UserCreate(BaseModel):
+class User(BaseModel):
     username: str
     email: str
-    full_name: Optional[str] = None
+    full_name: str | None = None
 
-class UserUpdate(BaseModel):
-    username: Optional[str] = None
-    email: Optional[str] = None
-    full_name: Optional[str] = None
-
-class TextCreate(BaseModel):
-    content: str
-    difficulty: str
-
-class ResultCreate(BaseModel):
+class Result(BaseModel):
     user_id: str
-    text_id: str
-    wpm: float
-    accuracy: float
-    mistakes: int
+    text_id: int
+    typed_text: str
+    reference_text: str
+    start_time: float
+    end_time: float
 
-# ------------------- API Endpoints -------------------
 
-@app.get("/")
-def home():
-    return {"message": "TypeMaster API is running"}
+# ------------------- User Routes ------------------- #
 
-# ------------------- Users Endpoints -------------------
+@app.post("/users/")
+def create_user(user: User):
+    return db.create_user(user.username, user.email, user.full_name)
 
-@app.post("/users/create")
-def create_user(user: UserCreate):
-    # Corrected variable name to match the database schema
-    res = type_master.add_user(user.username, user.email, user.full_name)
-    if res["success"]:
-        return res
-    raise HTTPException(status_code=400, detail=res["message"])
-
-@app.get("/users")
+@app.get("/users/")
 def get_users():
-    res = type_master.list_users()
-    return res
+    return db.get_all_users()
 
-@app.put("/users/{user_id}")
-def update_user(user_id: str, user: UserUpdate):
-    res = type_master.update_user(user_id, user.dict(exclude_none=True))
-    if res["success"]:
-        return res
-    raise HTTPException(status_code=400, detail=res["message"])
 
-@app.delete("/users/{user_id}")
-def delete_user(user_id: str):
-    res = type_master.delete_user(user_id)
-    if res["success"]:
-        return res
-    raise HTTPException(status_code=400, detail=res["message"])
+# ------------------- Text Routes ------------------- #
 
-# ------------------- Texts Endpoints -------------------
+@app.get("/texts/{difficulty}")
+def get_text(difficulty: str):
+    return db.get_random_text(difficulty)
 
-@app.post("/texts/create")
-def create_text(text: TextCreate):
-    res = type_master.add_text(text.content, text.difficulty)
-    if res["success"]:
-        return res
-    raise HTTPException(status_code=400, detail=res["message"])
 
-@app.get("/texts/random/{difficulty}")
-def get_random_text(difficulty: str):
-    res = type_master.get_random_text(difficulty)
-    if res["success"]:
-        return res
-    raise HTTPException(status_code=404, detail=res["message"])
+# ------------------- Results Routes ------------------- #
 
-# ------------------- Results Endpoints -------------------
-
-@app.post("/results/submit")
-def submit_result(result: ResultCreate):
-    res = type_master.save_result(
+@app.post("/results/")
+def save_result(result: Result):
+    res = logic.calculate_results(
+        result.start_time,
+        result.end_time,
+        result.typed_text,
+        result.reference_text
+    )
+    return db.create_result(
         result.user_id,
         result.text_id,
-        result.wpm,
-        result.accuracy,
-        result.mistakes
+        res["wpm"],
+        res["accuracy"],
+        res["mistakes"],
+        res["duration"]
     )
-    if res["success"]:
-        return res
-    raise HTTPException(status_code=400, detail=res["message"])
 
 @app.get("/results/{user_id}")
-def get_user_results(user_id: str):
-    res = type_master.get_user_results(user_id)
-    return res
+def get_results(user_id: str):
+    return db.get_user_results(user_id)
 
-# ------------------- Leaderboard Endpoint -------------------
 
-@app.get("/leaderboard")
-def get_leaderboard(limit: int = 10):
-    res = type_master.get_leaderboard(limit)
-    return res
+# ------------------- Leaderboard ------------------- #
+
+@app.get("/leaderboard/")
+def leaderboard(limit: int = 10):
+    return db.get_leaderboard(limit)

@@ -1,157 +1,211 @@
 import streamlit as st
-import requests
 import time
-import json
+import uuid
+import requests
 
-# ------------------ CONFIG ------------------
-# The URL for your FastAPI backend. Make sure it is running on this port.
-API_URL = "http://127.0.0.1:8000"
+# ---------------- CONFIG (must be first Streamlit command) ----------------
+st.set_page_config(page_title="TypeMaster", layout="centered")
+BASE_API_URL = "http://localhost:8000"  # Change to your backend url if needed
 
-st.set_page_config(page_title="TypeMaster", page_icon="⌨️", layout="wide")
-st.title("⌨️ TypeMaster - Typing Speed Test")
-
-# Initialize session state variables if they don't exist
-if 'user' not in st.session_state:
-    st.session_state.user = None
-if 'text_data' not in st.session_state:
-    st.session_state.text_data = None
-if 'start_time' not in st.session_state:
-    st.session_state.start_time = None
-if 'show_results' not in st.session_state:
-    st.session_state.show_results = False
-
-# ------------------ SIDEBAR FOR USER LOGIN ------------------
-st.sidebar.header("User Profile")
-if st.session_state.user:
-    st.sidebar.success(f"Logged in as: {st.session_state.user['username']}")
-    st.sidebar.button("Logout", on_click=lambda: st.session_state.clear())
-else:
-    with st.sidebar.form("login_form"):
-        st.subheader("Login / Signup")
-        username = st.text_input("Username")
-        email = st.text_input("Email")
-        full_name = st.text_input("Full Name (optional)")
-        submitted = st.form_submit_button("Login / Signup")
-
-        if submitted:
-            # Explicitly check that username and email are not empty strings
-            if not username.strip() or not email.strip():
-                st.sidebar.error("Username and Email are required.")
+# ---------------- HELPERS ----------------
+def highlight_typed_text(reference: str, typed: str) -> str:
+    out = []
+    for i, ch in enumerate(reference):
+        if i < len(typed):
+            if typed[i] == ch:
+                out.append(f'<span style="color:#4CAF50">{ch}</span>')
             else:
-                try:
-                    response = requests.post(
-                        f"{API_URL}/users/create",
-                        json={"username": username, "email": email, "full_name": full_name}
-                    )
-                    response.raise_for_status() # Raise an exception for HTTP errors
-                    st.session_state.user = response.json().get("user")
-                    st.sidebar.success(f"Logged in as {username}!")
-                except requests.exceptions.RequestException as e:
-                    # In case of a 400 Bad Request, we can get more info
-                    if e.response and e.response.status_code == 400:
-                        try:
-                            error_detail = e.response.json().get("detail", "Bad request.")
-                            st.sidebar.error(f"Error: {error_detail}")
-                        except json.JSONDecodeError:
-                            st.sidebar.error("Bad Request: The data sent was invalid.")
-                    else:
-                        st.sidebar.error(f"Error connecting to backend: {e}")
-                except (json.JSONDecodeError, KeyError) as e:
-                    st.sidebar.error("Invalid response from backend. Please check the backend logs.")
+                out.append(f'<span style="color:#F44336; text-decoration:underline;">{ch}</span>')
+        else:
+            out.append(f'<span style="color:#8a8a8a">{ch}</span>')
+    if len(typed) > len(reference):
+        extras = typed[len(reference):]
+        out.append(f'<span style="color:#F44336">{extras}</span>')
+    return "".join(out)
 
+def fetch_new_text_from_api(difficulty: str):
+    try:
+        r = requests.get(f"{BASE_API_URL}/texts/{difficulty}", timeout=3)
+        r.raise_for_status()
+        j = r.json()
+        if isinstance(j, dict) and j.get("data"):
+            item = j["data"][0]
+            content = item.get("content")
+            if content and isinstance(content, str) and content.strip():
+                return {"id": item.get("id"), "content": content.strip()}
+    except Exception:
+        pass
+    return None
 
-# ------------------ MAIN APP CONTENT ------------------
+def save_result_to_api(payload: dict):
+    try:
+        r = requests.post(f"{BASE_API_URL}/results/", json=payload, timeout=3)
+        r.raise_for_status()
+    except Exception:
+        pass
 
-if not st.session_state.user:
-    st.info("Please log in or sign up in the sidebar to start a typing test.")
-else:
-    # --- Typing Test Section ---
-    st.header("Start a New Test")
-    difficulty = st.selectbox("Select Difficulty", ["easy", "medium", "hard"])
-    
-    start_test_button = st.button("Get a New Text")
-    if start_test_button:
-        st.session_state.show_results = False
-        st.session_state.text_data = None
-        st.session_state.start_time = None
-        st.session_state.end_time = None
+# ---------------- SESSION STATE ----------------
+defaults = {
+    "reference_text": "Click 'Start New Test' to generate a text.",
+    "current_text_id": None,
+    "test_active": False,
+    "test_finished": False,
+    "typed_text": "",
+    "difficulty": "medium",
+    "logged_in": False,
+    "username": "Guest",
+    "user_id": None,
+    "start_time": None,
+    "end_time": None,
+}
+for k, v in defaults.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
-        try:
-            response = requests.get(f"{API_URL}/texts/random/{difficulty}")
-            response.raise_for_status()
-            text_response = response.json()
-            if text_response.get("success"):
-                st.session_state.text_data = text_response["text"]
-                st.session_state.start_time = time.time()
-            else:
-                st.error("No texts found for this difficulty. Please add some to the database.")
-        except requests.exceptions.RequestException as e:
-            st.error(f"Could not connect to the backend API. Please ensure it is running: {e}")
-        except (json.JSONDecodeError, KeyError) as e:
-            st.error("Invalid response from backend.")
-    
-    if st.session_state.text_data:
-        st.markdown(f"**Difficulty:** _{st.session_state.text_data['difficulty'].capitalize()}_")
-        st.markdown(f"**Text:**")
-        st.code(st.session_state.text_data["content"], language="text")
+if st.session_state["user_id"] is None:
+    st.session_state["user_id"] = str(uuid.uuid4())
 
-        typed_text = st.text_area("Start typing here...", height=200, key="typed_text")
-        
-        # Simple WPM calculation as user types
-        current_time = time.time()
-        duration = current_time - st.session_state.start_time if st.session_state.start_time else 0
-        wpm = (len(typed_text.split()) / duration) * 60 if duration > 0 and len(typed_text.split()) > 0 else 0
-        st.info(f"Current WPM: {wpm:.2f}")
+# ---------------- UI ----------------
+st.title("⌨️ TypeMaster — Live Typing Test")
 
-        if st.button("Submit Test"):
-            st.session_state.end_time = time.time()
-            st.session_state.show_results = True
-
-    if st.session_state.show_results and st.session_state.text_data:
-        original_text = st.session_state.text_data["content"]
-        typed_text = st.session_state.typed_text
-
-        # Prepare payload for backend
-        payload = {
-            "user_id": st.session_state.user["id"],
-            "text_id": st.session_state.text_data["id"],
-            "wpm": wpm,
-            "accuracy": 0, # Placeholder, calculation handled by logic.py
-            "mistakes": 0  # Placeholder, calculation handled by logic.py
-        }
-        
-        # Submit results to backend and get final calculated metrics
-        try:
-            response = requests.post(f"{API_URL}/results/submit", json=payload)
-            response.raise_for_status()
-            result_data = response.json()
-            if result_data.get("success"):
-                st.balloons()
-                st.success("Test submitted successfully!")
-                st.markdown(f"**Your WPM:** {result_data['result']['wpm']:.2f}")
-                st.markdown(f"**Accuracy:** {result_data['result']['accuracy']:.2f}%")
-                st.markdown(f"**Mistakes:** {result_data['result']['mistakes']}")
-            else:
-                st.error("Failed to submit results. Please try again.")
-        except requests.exceptions.RequestException as e:
-            st.error(f"Could not connect to the backend API to submit results: {e}")
-
-
-# ------------------ LEADERBOARD SECTION ------------------
-st.markdown("---")
-st.header("Global Leaderboard")
-try:
-    lb_res = requests.get(f"{API_URL}/leaderboard")
-    lb_res.raise_for_status()
-    data = lb_res.json()
-    leaderboard = data.get("leaderboard", [])
-
-    if leaderboard:
-        st.table(leaderboard)
+# Sidebar: login/register
+with st.sidebar:
+    st.header("👤 Account")
+    if not st.session_state["logged_in"]:
+        mode = st.radio("Mode", ["Login", "Register"], key="sidebar_mode")
+        username_in = st.text_input("Username", key="sidebar_username")
+        if mode == "Register":
+            email_in = st.text_input("Email", key="sidebar_email")
+            full_in = st.text_input("Full name (optional)", key="sidebar_fullname")
+            if st.button("Register", key="sidebar_btn_register") and username_in.strip():
+                # Registration API call could be inserted here
+                st.session_state["logged_in"] = True
+                st.session_state["username"] = username_in.strip()
+                st.success("Registered and logged in!")
+        else:
+            if st.button("Login", key="sidebar_btn_login") and username_in.strip():
+                # Login API call could be inserted here
+                st.session_state["logged_in"] = True
+                st.session_state["username"] = username_in.strip()
+                st.success(f"Logged in as {st.session_state['username']}")
     else:
-        st.info("Leaderboard is empty. Be the first to add a result!")
+        st.markdown(f"**{st.session_state['username']}**")
+        if st.button("Logout", key="sidebar_btn_logout"):
+            st.session_state["logged_in"] = False
+            st.session_state["username"] = "Guest"
+            st.session_state["user_id"] = str(uuid.uuid4())
+            st.success("Logged out.")
 
-except requests.exceptions.RequestException:
-    st.error("Could not fetch the leaderboard. Please ensure the backend is running.")
-except (json.JSONDecodeError, KeyError):
-    st.error("Invalid response from the backend when fetching leaderboard data.")
+# Difficulty selector + Start button
+col1, col2 = st.columns([3,1])
+with col1:
+    selected = st.selectbox("Difficulty", ["easy", "medium", "hard"], index=["easy", "medium", "hard"].index(st.session_state.get("difficulty", "medium")), key="difficulty_select")
+    st.session_state["difficulty"] = selected
+with col2:
+    if st.button("🚀 Start New Test", key="start_test"):
+        st.session_state["test_active"] = True
+        st.session_state["test_finished"] = False
+        st.session_state["typed_text"] = ""
+        st.session_state["start_time"] = None
+        st.session_state["end_time"] = None
+
+        difficulty = st.session_state["difficulty"]
+        item = fetch_new_text_from_api(difficulty)
+        if item:
+            st.session_state["reference_text"] = item["content"]
+            st.session_state["current_text_id"] = item["id"]
+        else:
+            samples = {
+                "easy": "The quick brown fox jumps over the lazy dog.",
+                "medium": "A journey of a thousand miles begins with a single step.",
+                "hard": "In programming, debugging is often twice as hard as writing the code."
+            }
+            st.session_state["reference_text"] = samples[difficulty]
+            st.session_state["current_text_id"] = None
+
+# Show reference text with live highlight during test
+st.markdown("### Text to Type")
+if st.session_state["test_active"]:
+    highlighted = highlight_typed_text(st.session_state["reference_text"], st.session_state["typed_text"])
+    st.markdown(
+        f'<div style="border-radius:6px; padding:12px; background:#0f1113; color:#ddd; font-family:monospace; font-size:1.05em;">{highlighted}</div>',
+        unsafe_allow_html=True,
+    )
+else:
+    st.code(st.session_state["reference_text"])
+
+# Typing input area - disabled when test inactive or finished
+typed = st.text_area(
+    "Start typing here:",
+    value=st.session_state["typed_text"],
+    key="typed_text",
+    height=170,
+    placeholder="Type here...",
+    disabled=not st.session_state["test_active"] or st.session_state["test_finished"],
+)
+
+# Live metrics calculation
+if st.session_state["test_active"]:
+    if st.session_state["start_time"] is None and len(st.session_state["typed_text"].strip()) > 0:
+        st.session_state["start_time"] = time.time()
+
+    typed_text = st.session_state["typed_text"]
+    ref_text = st.session_state["reference_text"]
+    now = time.time()
+
+    if st.session_state["start_time"]:
+        duration = now - st.session_state["start_time"]
+        if duration > 0:
+            chars_typed = len(typed_text)
+            wpm = (chars_typed / 5) / (duration / 60)
+            correct_chars = sum(1 for a, b in zip(typed_text, ref_text) if a == b)
+            mistakes = max(0, len(typed_text) - correct_chars)
+            accuracy = (correct_chars / len(typed_text)) * 100 if len(typed_text) > 0 else 100.0
+            progress = min(len(typed_text) / len(ref_text), 1.0)
+        else:
+            wpm = 0
+            mistakes = 0
+            accuracy = 100
+            progress = 0
+    else:
+        wpm, mistakes, accuracy, progress = 0, 0, 100, 0
+
+    # Display live metrics
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("WPM", f"{wpm:.2f}")
+    col2.metric("Accuracy", f"{accuracy:.1f}%")
+    col3.metric("Mistakes", mistakes)
+    col4.progress(progress)
+
+    # Check for completion
+    if typed_text == ref_text:
+        st.session_state["test_finished"] = True
+        st.session_state["test_active"] = False
+        st.session_state["end_time"] = time.time()
+
+        save_result_to_api({
+            "user_id": st.session_state["user_id"],
+            "text_id": st.session_state["current_text_id"],
+            "typed_text": typed_text,
+            "reference_text": ref_text,
+            "start_time": st.session_state["start_time"],
+            "end_time": st.session_state["end_time"],
+        })
+        st.success(f"Test complete! Final WPM: {wpm:.2f} | Accuracy: {accuracy:.1f}%")
+        st.balloons()
+
+# Leaderboard (optional)
+st.markdown("---")
+st.header("🏆 Leaderboard (top)")
+try:
+    r = requests.get(f"{BASE_API_URL}/leaderboard/", timeout=3)
+    r.raise_for_status()
+    lb = r.json().get("data", [])
+    if lb:
+        st.table(lb)
+    else:
+        st.info("Leaderboard empty or not available.")
+except Exception:
+    st.info("Leaderboard not available (backend not reachable).")
+
+st.markdown("---")
