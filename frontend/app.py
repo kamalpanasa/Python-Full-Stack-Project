@@ -6,7 +6,7 @@ import json # Ensure json is available for safety
 
 # ---------------- CONFIG (must be first Streamlit command) ----------------
 st.set_page_config(page_title="TypeMaster", layout="centered")
-BASE_API_URL = "http://localhost:8000"  # Ensure this matches your FastAPI port
+BASE_API_URL = "https://python-full-stack-project-xps2.onrender.com"  # Ensure this matches your FastAPI port
 # TIME_LIMIT removed (now completion-based)
 
 # ---------------- HELPERS ----------------
